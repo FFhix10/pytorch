@@ -1,5 +1,6 @@
 #pragma once
-#ifdef USE_VULKAN
+
+#ifdef USE_VULKAN_API
 
 #include <ATen/native/vulkan/ops/Common.h>
 #include <torch/library.h>
@@ -12,7 +13,6 @@ namespace ops {
 class LinearOpContext final : public torch::jit::CustomClassHolder {
  public:
   static LinearOpContext create(
-      api::Resource::Pool& pool,
       const Tensor& weight,
       const c10::optional<Tensor>& bias);
 
@@ -23,7 +23,6 @@ class LinearOpContext final : public torch::jit::CustomClassHolder {
 
  private:
   LinearOpContext(
-      api::Resource::Pool& pool,
       const Tensor& weight,
       const c10::optional<Tensor>& bias);
 
@@ -52,4 +51,4 @@ Tensor linear_run(
 } // namespace native
 } // namespace at
 
-#endif /* USE_VULKAN */
+#endif /* USE_VULKAN_API */

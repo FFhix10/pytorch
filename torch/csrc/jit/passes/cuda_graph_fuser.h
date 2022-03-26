@@ -1,6 +1,6 @@
 #pragma once
 
-#include <aten/src/ATen/Context.h>
+#include <ATen/Context.h>
 #include <torch/csrc/jit/codegen/cuda/interface.h>
 #include <torch/csrc/jit/ir/ir.h>
 #include <torch/csrc/jit/passes/pass_manager.h>
@@ -12,11 +12,11 @@ namespace jit {
 struct C10_EXPORT RegisterCudaFuseGraph
     : public PassManager<RegisterCudaFuseGraph> {
   static bool registerPass(bool enabled) {
-    TORCH_CHECK(
-        at::globalContext().hasCUDA() && !at::globalContext().hasHIP(),
-        "Running CUDA fuser is only supported on CUDA builds.");
     bool old_flag = PassManager::isRegistered();
     if (enabled) {
+      TORCH_CHECK(
+          at::globalContext().hasCUDA() && !at::globalContext().hasHIP(),
+          "Running CUDA fuser is only supported on CUDA builds.");
       PassManager::registerPass(fuser::cuda::fuseGraph);
     } else {
       PassManager::clearPass();
