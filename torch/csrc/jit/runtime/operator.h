@@ -5,16 +5,15 @@
 
 #include <ATen/core/dispatch/Dispatcher.h>
 #include <ATen/core/dispatch/OperatorOptions.h>
-#include <ATen/core/op_registration/op_whitelist.h>
+#include <ATen/core/op_registration/op_allowlist.h>
 #include <ATen/core/stack.h>
 #include <c10/util/Exception.h>
 #include <torch/csrc/jit/frontend/function_schema_parser.h>
 #include <torch/csrc/jit/runtime/operator_options.h>
 #include <torch/library.h>
 
-#include <ATen/ATen.h>
 #include <ATen/core/function_schema.h>
-#include <ATen/core/interned_strings.h>
+#include <ATen/core/symbol.h>
 
 #include <functional>
 #include <initializer_list>
@@ -54,6 +53,7 @@ using OperationCreator = Operation (*)(const Node*);
 // the concrete operator nature.
 struct TORCH_API Operator {
  private:
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
   struct C10Operator final {
     c10::OperatorHandle handle_;
     Operation op_;
@@ -62,6 +62,7 @@ struct TORCH_API Operator {
     std::string schema_string_;
     mutable c10::optional<c10::AliasAnalysisKind> alias_analysis_;
   };
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
   struct JitOnlyOperator final {
     // The only valid transition for schema_ is from right->left, i.e.
     // when the schema gets parsed.
@@ -73,7 +74,7 @@ struct TORCH_API Operator {
  public:
   Operator(c10::OperatorHandle opHandle, Operation operation)
       : op_(c10::make_left<C10Operator, JitOnlyOperator>(
-            C10Operator{std::move(opHandle), std::move(operation)})) {}
+            C10Operator{opHandle, std::move(operation)})) {}
 
   Operator(
       std::string schema,
@@ -84,17 +85,6 @@ struct TORCH_API Operator {
                 UnparsedFunctionSchema{std::move(schema), alias_analysis}),
             c10::make_left<Operation, OperationCreator>(std::move(op))})) {}
 
-  C10_DEPRECATED_MESSAGE(
-      "Please define your operator as taking a `Stack*` argument instead of `Stack&` and as returning `void` instead of `int`.")
-  Operator(
-      std::string schema,
-      std::function<int(Stack&)> op,
-      c10::AliasAnalysisKind alias_analysis)
-      : Operator(
-            std::move(schema),
-            [op = std::move(op)](Stack* stack) { op(*stack); },
-            alias_analysis) {}
-
   Operator(
       std::string schema,
       OperationCreator op_creator,
@@ -102,8 +92,7 @@ struct TORCH_API Operator {
       : op_(c10::make_right<C10Operator, JitOnlyOperator>(JitOnlyOperator{
             c10::make_right<FunctionSchema, UnparsedFunctionSchema>(
                 UnparsedFunctionSchema{std::move(schema), alias_analysis}),
-            c10::make_right<Operation, OperationCreator>(
-                std::move(op_creator))})) {}
+            c10::make_right<Operation, OperationCreator>(op_creator)})) {}
 
   // Helper constructor to register `op` to run
   // run for _every_ IR Node where n.kind() == name, regardless of arguments.
@@ -116,8 +105,7 @@ struct TORCH_API Operator {
       : op_(c10::make_right<C10Operator, JitOnlyOperator>(JitOnlyOperator{
             c10::make_left<FunctionSchema, UnparsedFunctionSchema>(
                 varArgSchemaWithName(name, alias_analysis)),
-            c10::make_right<Operation, OperationCreator>(
-                std::move(op_creator))})) {}
+            c10::make_right<Operation, OperationCreator>(op_creator)})) {}
 
   Operation getOperation(const Node* node = nullptr) const {
     return op_.fold<Operation>(
@@ -231,11 +219,22 @@ TORCH_API bool aliasAnalysisHasSpecialCaseFor(c10::Symbol sym);
 // string.
 template <typename Func>
 c10::optional<Operator> OperatorGenerator(
-    torch::detail::SelectiveStr<true> schema_str,
+    const char* schema_str,
     Func&& op,
     AliasAnalysisKind alias_analysis) {
   return c10::optional<Operator>(Operator(
       std::string(schema_str), std::forward<Func>(op), alias_analysis));
+}
+
+template <typename Func>
+c10::optional<Operator> OperatorGenerator(
+    torch::detail::SelectiveStr<true> schema_str,
+    Func&& op,
+    AliasAnalysisKind alias_analysis) {
+  return OperatorGenerator(
+      static_cast<const char*>(schema_str),
+      std::forward<Func>(op),
+      alias_analysis);
 }
 
 template <typename Func>
