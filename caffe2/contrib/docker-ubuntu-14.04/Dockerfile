@@ -1,4 +1,8 @@
+snyk-fix-73cf61446263f8aec757ac14ee03a9bb
+FROM ubuntu:trusty-20190425
+
 FROM ubuntu:trusty-20190515
+ master
 MAINTAINER caffe-dev <caffe-dev@googlegroups.com>
 
 # A docker container with CUDA and caffe2 installed.
