@@ -30,45 +30,12 @@ def get_processor_arch_name(gpu_version):
         "cu" + gpu_version.strip("cuda") if gpu_version.startswith("cuda") else gpu_version
     )
 
-
-LINUX_PACKAGE_VARIANTS = OrderedDict(
-    manywheel=[
-        "3.6m",
-        "3.7m",
-        "3.8m",
-        "3.9m"
-    ],
-    conda=dimensions.STANDARD_PYTHON_VERSIONS,
-    libtorch=[
-        "3.7m",
-    ],
-)
-
-# TODO: There's an issue with current Python 3.9 builds that only occurs during
-#       windows builds, let's just not build 3.9 for windows and figure out how
-#       to resolve afterwards
-PYTHON_VERSIONS_NO_39 = [
-    v for v in dimensions.STANDARD_PYTHON_VERSIONS if v not in ['3.9']
-]
-
 CONFIG_TREE_DATA = OrderedDict(
-    linux=(dimensions.GPU_VERSIONS, LINUX_PACKAGE_VARIANTS),
-    macos=([None], OrderedDict(
-        wheel=PYTHON_VERSIONS_NO_39,
-        conda=PYTHON_VERSIONS_NO_39,
-        libtorch=[
-            "3.7",
-        ],
-    )),
-    # Skip CUDA-9.2 builds on Windows
     windows=(
-        [v for v in dimensions.GPU_VERSIONS if v not in ['cuda92'] + dimensions.ROCM_VERSION_LABELS],
+        # Stop building Win+CU102, see https://github.com/pytorch/pytorch/issues/65648
+        [v for v in dimensions.GPU_VERSIONS if v not in dimensions.ROCM_VERSION_LABELS and v != "cuda102"],
         OrderedDict(
-            wheel=PYTHON_VERSIONS_NO_39,
-            conda=PYTHON_VERSIONS_NO_39,
-            libtorch=[
-                "3.7",
-            ],
+            conda=dimensions.STANDARD_PYTHON_VERSIONS,
         )
     ),
 )
@@ -124,6 +91,7 @@ class PackageFormatConfigNode(ConfigNode):
 
         self.props["python_versions"] = python_versions
         self.props["package_format"] = package_format
+
 
     def get_children(self):
         if self.find_prop("os_name") == "linux":
