@@ -1,3 +1,6 @@
+ snyk-fix-aa0a1827f723515e579c2ab7b3808c8e
+FROM ubuntu:trusty-20190515
+
 snyk-fix-be251893bd278322a7c30ad3570f8c2f
 FROM ubuntu:trusty-20190515
 
@@ -5,7 +8,8 @@ snyk-fix-73cf61446263f8aec757ac14ee03a9bb
 FROM ubuntu:trusty-20190425
 
 FROM ubuntu:trusty-20190515
- master
+
+
 
 MAINTAINER caffe-dev <caffe-dev@googlegroups.com>
 
