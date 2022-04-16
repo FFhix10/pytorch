@@ -18,7 +18,9 @@ RUN bash ./install_base.sh && rm install_base.sh
 # Update CentOS git version
 RUN yum -y remove git
 RUN yum -y remove git-*
-RUN yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.9-1.x86_64.rpm
+RUN yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.9-1.x86_64.rpm || \
+    (yum -y install https://packages.endpointdev.com/rhel/7/os/x86_64/endpoint-repo-1.9-1.x86_64.rpm && \
+    sed -i "s/packages.endpoint/packages.endpointdev/" /etc/yum.repos.d/endpoint.repo)
 RUN yum install -y git
 
 # Install devtoolset
@@ -40,8 +42,10 @@ RUN bash ./install_user.sh && rm install_user.sh
 # Install conda and other packages (e.g., numpy, pytest)
 ENV PATH /opt/conda/bin:$PATH
 ARG ANACONDA_PYTHON_VERSION
+ADD requirements-ci.txt /opt/conda/requirements-ci.txt
 ADD ./common/install_conda.sh install_conda.sh
 RUN bash ./install_conda.sh && rm install_conda.sh
+RUN rm /opt/conda/requirements-ci.txt
 
 # (optional) Install protobuf for ONNX
 ARG PROTOBUF
